@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Agenda - Advogado Alexandre Devequi</title>
   <style>
     body {
@@ -26,8 +26,9 @@
       color: white;
       font-weight: bold;
       cursor: pointer;
+      transition: background-color 0.3s;
     }
-    .botao:hover {
+    .botao:hover:not(:disabled) {
       background: #cf8a00;
     }
     #formulario {
@@ -37,8 +38,12 @@
     .horarios .botao {
       background-color: #0077cc;
     }
-    .horarios .botao:hover {
+    .horarios .botao:hover:not(:disabled) {
       background-color: #005999;
+    }
+    .botao:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
     }
     input {
       padding: 8px;
@@ -55,13 +60,13 @@
 <div class="dias" id="dias"></div>
 <div class="horarios" id="horarios"></div>
 
-<form id="formulario" action="https://formsubmit.co/andraderafaelracker@gmail.com" method="POST">
+<form id="formulario" action="https://script.google.com/macros/s/AKfycbylW4tdXA-FFSQRz5j3fhe9A3QYf3c4vG9youDZP_T5ycYj1YcV4trbhrhKif8-1mlk/exec" method="POST">
   <h3>Preencha seus dados</h3>
   <p id="infoSelecionada"></p>
-  <input type="text" name="Nome" id="nome" placeholder="Seu nome" required><br><br>
-  <input type="tel" name="Telefone" id="telefone" placeholder="Seu telefone" required><br><br>
-  <input type="hidden" name="Dia" id="diaCampo">
-  <input type="hidden" name="Horario" id="horaCampo">
+  <input type="text" name="Nome" id="nome" placeholder="Seu nome" required /><br /><br />
+  <input type="tel" name="Telefone" id="telefone" placeholder="Seu telefone" required /><br /><br />
+  <input type="hidden" name="Dia" id="diaCampo" />
+  <input type="hidden" name="Horario" id="horaCampo" />
   <button class="botao" type="submit">Confirmar</button>
 </form>
 
@@ -69,7 +74,23 @@
   const diasDaSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
   const hoje = new Date();
   const diasContainer = document.getElementById("dias");
+  const horariosDisponiveis = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
+  let diaSelecionado = '';
+  let horarioSelecionado = '';
+  let agendamentosReservados = [];
 
+  // Função para carregar os agendamentos já feitos do Google Apps Script
+  async function carregarAgendamentos() {
+    try {
+      const response = await fetch('https://script.google.com/macros/s/AKfycbylW4tdXA-FFSQRz5j3fhe9A3QYf3c4vG9youDZP_T5ycYj1YcV4trbhrhKif8-1mlk/exec');
+      agendamentosReservados = await response.json();
+    } catch (error) {
+      console.error('Erro ao carregar agendamentos:', error);
+      agendamentosReservados = [];
+    }
+  }
+
+  // Monta os botões dos dias úteis (Segunda a Sexta)
   for (let i = 0; i < 7; i++) {
     let data = new Date();
     data.setDate(hoje.getDate() + i);
@@ -84,36 +105,48 @@
       let btn = document.createElement("button");
       btn.className = "botao";
       btn.innerText = rotulo;
+      btn.type = "button";
       btn.onclick = () => selecionarDia(dataFormatada);
       diasContainer.appendChild(btn);
     }
   }
 
-  const horariosDisponiveis = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
-  let diaSelecionado = '';
-  let horarioSelecionado = '';
-
+  // Função para montar os botões de horários e desabilitar os já reservados
   function selecionarDia(dia) {
     diaSelecionado = dia;
+    horarioSelecionado = '';
     document.getElementById("horarios").innerHTML = "";
+
     horariosDisponiveis.forEach(horario => {
+      const reservado = agendamentosReservados.some(agendamento => agendamento.dia === diaSelecionado && agendamento.horario === horario);
       const btn = document.createElement("button");
       btn.className = "botao";
       btn.innerText = horario;
-      btn.onclick = () => selecionarHorario(horario);
+      btn.type = "button";
+      btn.disabled = reservado;
+
+      if (reservado) {
+        btn.title = "Horário já reservado";
+      } else {
+        btn.onclick = () => selecionarHorario(horario);
+      }
       document.getElementById("horarios").appendChild(btn);
     });
+
     document.getElementById("formulario").style.display = "none";
   }
 
+  // Função para exibir o formulário e preencher campos escondidos
   function selecionarHorario(horario) {
     horarioSelecionado = horario;
-    document.getElementById("infoSelecionada").innerText =
-      `Dia: ${diaSelecionado} - Horário: ${horarioSelecionado}`;
+    document.getElementById("infoSelecionada").innerText = `Dia: ${diaSelecionado} - Horário: ${horarioSelecionado}`;
     document.getElementById("diaCampo").value = diaSelecionado;
     document.getElementById("horaCampo").value = horarioSelecionado;
     document.getElementById("formulario").style.display = "block";
   }
+
+  // Carrega agendamentos assim que a página abrir
+  carregarAgendamentos();
 </script>
 
 </body>
